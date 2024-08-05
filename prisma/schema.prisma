@@ -1,0 +1,84 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model answer_options {
+  answer_id        Int                @id @default(autoincrement()) @map("answer_id")
+  answer_type      Int                @map("answer_type")
+  name             String             @db.VarChar(45) @map("name")
+  tb_answer_types  answer_types       @relation(fields: [answer_type], references: [answer_type_id], onDelete: NoAction, onUpdate: NoAction, map: "fk_answes_option_type")
+  tb_forms_answers forms_answers[]
+
+  @@index([answer_type], map: "fk_answes_option_type")
+  @@map("tb_answer_options")
+}
+
+model answer_types {
+  answer_type_id    Int                 @id @default(autoincrement()) @map("answer_type_id")
+  name              String              @db.VarChar(45) @map("name")
+  answer_options    answer_options[]
+  questions         questions[]
+
+  @@map("tb_answer_types")
+}
+
+model forms {
+  form_id          Int                @id @default(autoincrement()) @map("form_id")
+  user_email       String             @db.VarChar(45) @map("user_email")
+  group_id         Int                @map("group_id")
+  tb_groups        groups             @relation(fields: [group_id], references: [group_id], onDelete: NoAction, onUpdate: NoAction, map: "fk_form_group")
+  tb_forms_answers forms_answers[]
+
+  @@index([group_id], map: "fk_form_group_idx")
+  @@map("tb_forms")
+}
+
+model forms_answers {
+  id_answer         Int               @id @default(autoincrement()) @map("id_answer")
+  form_id           Int                @map("form_id")
+  question_id       Int                @map("question_id")
+  answer_id         Int                @map("answer_id")
+  answer_options    answer_options @relation(fields: [answer_id], references: [answer_id], onDelete: NoAction, onUpdate: NoAction, map: "fk_answer_question")
+  forms             forms          @relation(fields: [form_id], references: [form_id], onDelete: NoAction, onUpdate: NoAction, map: "fk_form_answers")
+  questions         questions      @relation(fields: [question_id], references: [question_id], onDelete: NoAction, onUpdate: NoAction, map: "fk_question_form")
+
+  @@index([answer_id], map: "fk_answer_question_idx")
+  @@index([form_id], map: "fk_form_answers_idx")
+  @@index([question_id], map: "fk_question_form_idx")
+
+  @@unique([id_answer])
+  @@unique([form_id, question_id], map: "form_answer_idx")
+
+  @@map("tb_forms_answers")
+}
+
+model groups {
+  group_id     Int            @id @default(autoincrement()) @map("group_id")
+  group_name   String         @db.VarChar(45) @map("group_name")
+  forms        forms[]
+  questions    questions[]
+
+  @@map("tb_groups")
+}
+
+model questions {
+  question_id      Int                @id @default(autoincrement()) @map("question_id")
+  title            String             @db.VarChar(120) @map("title")
+  answer_type_id   Int                @map("answer_type_id")
+  group_id         Int?               @map("group_id")
+  created_at       DateTime           @default(now()) @db.DateTime(0) @map("created_at")
+  deleted_at       DateTime?          @db.DateTime(0) @map("deleted_at")
+  forms_answers    forms_answers[]
+  answer_types     answer_types    @relation(fields: [answer_type_id], references: [answer_type_id], onDelete: NoAction, onUpdate: NoAction, map: "fk_answer_type_question")
+  groups           groups?         @relation(fields: [group_id], references: [group_id], onDelete: NoAction, onUpdate: NoAction, map: "fk_group_question")
+
+  @@index([group_id], map: "fk_answer_group_idx")
+  @@index([answer_type_id], map: "fk_answer_type_question_idx")
+  @@index([group_id], map: "fk_group_question_idx")
+  @@map("tb_questions")
+}
