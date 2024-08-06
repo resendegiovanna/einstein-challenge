@@ -1,8 +1,9 @@
-import { Body, Controller, Get, ParseArrayPipe, Post, Put, Query } from '@nestjs/common';
+import { Body, Controller, Get, Header, Post, Put, Query, Res } from '@nestjs/common';
 import { FormService } from './form.service';
 import { ListQuestionsDto } from './dto/list-questions.dto';
 import { CreateFormDto } from './dto/create-form.dto';
 import { ItemDto } from './dto/answer-form-item.dto';
+import { Response } from 'express';
 
 @Controller("form")
 export class FormController {
@@ -33,4 +34,13 @@ export class FormController {
   async GetAnswers(@Query() data: ListQuestionsDto){
     return this.formService.GetAnswers(data.group_id);
   }
+
+  @Get("export")
+  @Header('Content-Type', 'text/csv')
+  @Header('Content-Disposition', 'attachment; filename="data.csv"')
+  async getCsv(@Res() res: Response) {
+    const csvData = await this.formService.getCsv();
+    res.send(csvData);
+  }
+
 }

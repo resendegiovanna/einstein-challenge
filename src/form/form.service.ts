@@ -2,12 +2,12 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateFormDto } from './dto/create-form.dto';
 import { ItemDto } from './dto/answer-form-item.dto';
-import { type } from 'os';
+import { CsvService } from './csv/csv.service';
 
 @Injectable()
 export class FormService {
 
-  constructor(private readonly prisma: PrismaService){}
+  constructor(private readonly prisma: PrismaService, private readonly csvService: CsvService){}
 
   async list(groupId?: number | any){
     const whereClause = groupId ? { group_id: groupId } : { group_id: null };
@@ -58,6 +58,36 @@ export class FormService {
     }
   }
 
+  async searchAnswers(form_id?: number | any){
+    return await this.prisma.forms_answers.findMany({
+      select: {
+        forms: {
+          select: {
+            user_email: true
+          }
+        },
+        questions: {
+          select: {
+            title: true
+          }
+        },
+        answer_options: {
+          select: {
+            name: true
+          }
+        }
+      },
+      orderBy: {
+        questions: {
+          question_id: 'asc'
+        }
+      },
+      where: {
+        form_id: form_id
+      }
+    });
+  }
+
   async GetAnswers(groupId?: number | any){
 
     const whereClause = groupId ? { group_id: groupId } : { };
@@ -69,30 +99,7 @@ export class FormService {
     let formattedForms = [];
 
     for (const form of forms) {
-      const answers = await this.prisma.forms_answers.findMany({
-        select: {
-          forms: {
-            select: {
-              user_email: true
-            }
-          },
-          questions: {
-            select: {
-              title: true
-            }
-          },
-          answer_options: {
-            select: {
-              name: true
-            }
-          }
-        },
-        orderBy: {
-          questions: {
-            question_id: 'asc'
-          }
-        }
-      });
+      let answers = await this.searchAnswers(form.form_id);
 
       const formattedAnswers = answers.map(answer => ({
         title: answer.questions.title,
@@ -109,4 +116,17 @@ export class FormService {
 
     return formattedForms;
   }
+
+  async getCsv(){
+    let answers = await this.searchAnswers();
+
+    const formattedAnswers = answers.map(answer => ({
+      user_email: answer.forms.user_email,
+      title: answer.questions.title,
+      answer: answer.answer_options.name,
+    }));
+    
+    return this.csvService.generateCsv(formattedAnswers);
+  }
+
 }
